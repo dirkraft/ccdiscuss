@@ -42,7 +42,7 @@ kbd {
 
 #layout {
   position: relative;
-  display: grid; grid-template-columns: minmax(0, 760px) 340px; gap: 32px;
+  display: grid; grid-template-columns: minmax(0, 760px) minmax(240px, 340px); gap: 32px;
   justify-content: center; padding: 24px 24px 120px;
 }
 #margin { position: relative; }

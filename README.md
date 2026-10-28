@@ -4,6 +4,11 @@
 in a Google Doc. Highlight a passage, comment, and the running Claude session
 answers in that thread.
 
+![ccdiscuss demo: /discuss opens the last response in its own window, a highlighted passage gets a comment, and Claude replies in the thread](docs/demo.gif)
+
+<sub>Type `/discuss`, highlight a passage, comment, read Claude's reply, follow
+up, close the window. ([MP4 version](docs/demo.mp4).)</sub>
+
 It replaces the habit of replying with
 
 ```
@@ -13,6 +18,13 @@ my thoughts here...
 
 for several passages at once, which makes it easy to lose track of which
 points you've covered. Each comment reaches the session in that same form.
+
+<img src="docs/thread.png" width="800" alt="The discussion window: a highlighted passage with its thread in the margin, two comments and two replies from Claude">
+
+In the terminal, each comment shows up as a Monitor event and each reply as
+one short line:
+
+<img src="docs/terminal.png" width="800" alt="The terminal during a discussion: /discuss, Monitor started, two comment events each followed by 'Replied in thread t1', then the stream ending when the window closed">
 
 Status: first version, tested end to end in a live session. Comments woke the
 idle session, replies showed up in their threads, and closing the window
@@ -129,4 +141,5 @@ ccdiscuss/
   src/ccdiscuss/      cli.py (open / watch / reply), window.py, transcript.py
   src/ccdiscuss/static/   index.html, app.js, style.css, vendor/ (pinned copies)
   skill/discuss/SKILL.md   symlinked into ~/.claude/skills/discuss
+  docs/               README demo and screenshots
 ```
