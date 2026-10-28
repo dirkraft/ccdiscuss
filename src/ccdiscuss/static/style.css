@@ -1,0 +1,116 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --muted: #656d76;
+  --border: #d0d7de;
+  --code-bg: #f6f8fa;
+  --card-bg: #ffffff;
+  --card-active: #f6f8fa;
+  --accent: #c15f3c;
+  --hl: rgba(255, 196, 0, 0.28);
+  --hl-active: rgba(255, 170, 0, 0.55);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #e6e6e6;
+    --muted: #9da5ae;
+    --border: #3d444d;
+    --code-bg: #2a2a2a;
+    --card-bg: #262626;
+    --card-active: #2e2e2e;
+    --hl: rgba(255, 196, 0, 0.18);
+    --hl-active: rgba(255, 170, 0, 0.38);
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); }
+body { font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
+header {
+  position: sticky; top: 0; z-index: 5;
+  padding: 8px 24px; font-size: 12.5px; color: var(--muted);
+  background: var(--bg); border-bottom: 1px solid var(--border);
+}
+kbd {
+  font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 1px 4px; border: 1px solid var(--border); border-radius: 4px;
+}
+
+#layout {
+  position: relative;
+  display: grid; grid-template-columns: minmax(0, 760px) 340px; gap: 32px;
+  justify-content: center; padding: 24px 24px 120px;
+}
+#margin { position: relative; }
+
+/* Rendered markdown, close to how Claude Code formats a response. */
+.md > :first-child { margin-top: 0; }
+.md h1, .md h2, .md h3, .md h4 { line-height: 1.3; margin: 1.4em 0 0.5em; }
+.md h1 { font-size: 1.5em; }
+.md h2 { font-size: 1.25em; }
+.md h3 { font-size: 1.08em; }
+.md p, .md ul, .md ol, .md blockquote, .md pre, .md table { margin: 0.6em 0; }
+.md ul, .md ol { padding-left: 1.6em; }
+.md li > ul, .md li > ol { margin: 0.15em 0; }
+.md li + li { margin-top: 0.15em; }
+.md a { color: var(--accent); }
+.md code {
+  font: 0.88em ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 4px;
+}
+.md pre { background: var(--code-bg); padding: 12px 14px; border-radius: 6px; overflow-x: auto; }
+.md pre code { background: none; padding: 0; font-size: 0.85em; }
+.md blockquote { color: var(--muted); border-left: 3px solid var(--border); padding-left: 12px; margin-left: 0; }
+.md table { border-collapse: collapse; display: block; overflow-x: auto; }
+.md th, .md td { border: 1px solid var(--border); padding: 5px 10px; text-align: left; vertical-align: top; }
+.md th { background: var(--code-bg); }
+.md hr { border: none; border-top: 1px solid var(--border); }
+
+::highlight(ccd-thread) { background-color: var(--hl); }
+::highlight(ccd-active) { background-color: var(--hl-active); }
+
+#add-comment {
+  position: absolute; z-index: 10;
+  font: 600 12.5px -apple-system, sans-serif;
+  padding: 5px 10px; border-radius: 6px; cursor: pointer;
+  color: #fff; background: var(--accent); border: none; box-shadow: var(--shadow);
+}
+
+.card {
+  position: absolute; left: 0; right: 0;
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 12px; font-size: 13.5px; line-height: 1.5;
+  transition: top 0.15s ease;
+}
+.card.active { background: var(--card-active); box-shadow: var(--shadow); z-index: 2; }
+.card .quote {
+  color: var(--muted); font-size: 12.5px; border-left: 3px solid var(--hl-active);
+  padding-left: 8px; margin-bottom: 8px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.msg + .msg { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.msg .who { font-weight: 600; font-size: 12.5px; }
+.msg.claude .who { color: var(--accent); }
+.msg .body { margin-top: 2px; }
+.msg .body > :first-child { margin-top: 0; }
+.msg .body > :last-child { margin-bottom: 0; }
+.status { color: var(--muted); font-size: 12.5px; font-style: italic; margin-top: 8px; }
+.composer { margin-top: 8px; }
+.composer textarea {
+  width: 100%; min-height: 34px; resize: vertical;
+  font: inherit; color: var(--fg); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px;
+}
+.composer textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.composer .actions { display: none; justify-content: flex-end; gap: 6px; margin-top: 6px; }
+.composer.open .actions { display: flex; }
+.composer button {
+  font: 600 12.5px -apple-system, sans-serif; padding: 4px 10px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--bg); color: var(--fg);
+}
+.composer button.send { background: var(--accent); border-color: var(--accent); color: #fff; }
+.composer button.send:disabled { opacity: 0.5; cursor: default; }

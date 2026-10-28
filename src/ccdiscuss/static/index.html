@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Discuss</title>
+  <link rel="stylesheet" href="vendor/hljs-github.min.css" media="(prefers-color-scheme: light)">
+  <link rel="stylesheet" href="vendor/hljs-github-dark.min.css" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="style.css">
+  <script src="vendor/markdown-it.min.js"></script>
+  <script src="vendor/highlight.min.js"></script>
+  <script src="vendor/purify.min.js"></script>
+</head>
+<body>
+  <header>
+    Select text, then press <kbd>⌘⌥M</kbd> or <b>Comment</b> to start a thread.
+    Close the window when you're done.
+  </header>
+  <main id="layout">
+    <article id="doc" class="md"></article>
+    <aside id="margin"></aside>
+  </main>
+  <button id="add-comment" hidden>Comment</button>
+  <script src="app.js"></script>
+</body>
+</html>

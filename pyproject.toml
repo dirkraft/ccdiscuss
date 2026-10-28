@@ -1,0 +1,19 @@
+[project]
+name = "ccdiscuss"
+version = "0.1.0"
+description = "Comment on parts of a Claude Code response in its own window; the running session replies in each thread."
+readme = "README.md"
+authors = [
+    { name = "Jason Dunkelberger", email = "dirkraft@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "pywebview>=5.4",
+]
+
+[project.scripts]
+ccdiscuss = "ccdiscuss.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
