@@ -34,6 +34,13 @@ header {
   position: sticky; top: 0; z-index: 5;
   padding: 8px 24px; font-size: 12.5px; color: var(--muted);
   background: var(--bg); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+#batch { display: flex; align-items: center; gap: 10px; white-space: nowrap; color: var(--fg); }
+#batch[hidden] { display: none; }
+#send-all {
+  font: 600 12.5px -apple-system, sans-serif; padding: 4px 10px; border-radius: 6px; cursor: pointer;
+  color: #fff; background: var(--accent); border: none;
 }
 kbd {
   font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -111,6 +118,14 @@ kbd {
 .msg .body { margin-top: 2px; }
 .msg .body > :first-child { margin-top: 0; }
 .msg .body > :last-child { margin-bottom: 0; }
+.msg.staged .who { color: var(--muted); }
+.msg.staged .body { border-left: 2px dashed var(--border); padding-left: 8px; }
+.staged-actions { display: flex; gap: 10px; margin-top: 4px; }
+.staged-actions button {
+  font: 12px -apple-system, sans-serif; color: var(--muted); cursor: pointer;
+  background: none; border: none; padding: 0; text-decoration: underline;
+}
+.card:not(.active) .staged-actions { display: none; }
 .status { color: var(--muted); font-size: 12.5px; font-style: italic; margin-top: 8px; }
 .composer { margin-top: 8px; }
 .composer textarea {
@@ -126,4 +141,4 @@ kbd {
   border: 1px solid var(--border); background: var(--bg); color: var(--fg);
 }
 .composer button.send { background: var(--accent); border-color: var(--accent); color: #fff; }
-.composer button.send:disabled { opacity: 0.5; cursor: default; }
+.composer button:disabled { opacity: 0.5; cursor: default; }

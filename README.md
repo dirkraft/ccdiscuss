@@ -18,6 +18,9 @@ my thoughts here...
 
 for several passages at once, which makes it easy to lose track of which
 points you've covered. Each comment reaches the session in that same form.
+When the highlight is four words or fewer, or its text appears more than
+once, a `[context: …before »quote« after…]` line comes with it, so Claude
+knows which occurrence you meant.
 
 <img src="docs/thread.png" width="800" alt="The discussion window: a highlighted passage with its thread in the margin, two comments and two replies from Claude">
 
@@ -50,6 +53,23 @@ apart.
    session** (no forks), so every thread shares the full history and sees the
    other threads. Claude always replies in the thread, even just to say it
    saw the comment.
+
+   For a one-off thought that doesn't need its own back-and-forth, press
+   **Stage** (<kbd>⇧⌘↩</kbd>) instead of **Comment** (<kbd>⌘↩</kbd>).
+   Staged comments wait in the window. **Send staged & close**, or simply
+   closing the window, sends them as a single message, in document order:
+
+   ```
+   > quote A
+   thoughts about A
+
+   > quote B
+   thoughts about B
+   ```
+
+   Claude answers that message in the terminal, as if you had typed it there.
+   One window can mix both: live threads for the points you want to talk
+   through, and staged notes for everything else.
 4. You can keep using the terminal while the window is open. Permission
    prompts show up there as usual.
 5. Close the window when you're done. If the threads settled on changes

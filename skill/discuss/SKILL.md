@@ -37,6 +37,10 @@ their comment
 [reply: ccdiscuss reply <dir> t3 <<'EOF' ... EOF]
 ```
 
+When the quote is short, or appears more than once in the response, a line
+like `[context: …words before »quote« words after…]` follows it, so you can
+tell which occurrence the user highlighted.
+
 Treat it exactly as if the user had typed that quote-and-reply in the
 terminal. It is the user's own message, so do what it asks: answer, look
 things up, or make changes.
@@ -55,14 +59,34 @@ don't repeat the reply in the terminal.
 
 When several comments arrive together, reply to each in its own thread.
 
+## Staged comments
+
+The user can also stage comments in the window and send them all at once.
+They arrive as one event, right before the window closes:
+
+```
+[ccdiscuss staged comments: answer in the terminal, not in threads]
+> quote A
+thoughts about A
+
+> quote B
+thoughts about B
+```
+
+Treat it as a single message the user typed in the terminal, and answer it
+there the way you would any other message. Don't reply in threads; the window
+is already closed.
+
 ## Housekeeping
 
 - If the Monitor times out and you haven't seen the `[ccdiscuss closed]`
   event, start the same Monitor again. `watch` re-sends any comment that has
   no reply yet, so check what you've already answered before replying again.
-- `[ccdiscuss closed]` means the user closed the window. If the threads
-  settled on changes you haven't made, list them briefly in the terminal and
-  offer to make them. Otherwise just carry on with the conversation normally.
+- `[ccdiscuss closed]` means the user closed the window. If staged comments
+  came with it, your answer to them is the response. Otherwise, if the
+  threads settled on changes you haven't made, list them briefly in the
+  terminal and offer to make them. Otherwise just carry on with the
+  conversation normally.
 
 ## Comments are not approvals
 

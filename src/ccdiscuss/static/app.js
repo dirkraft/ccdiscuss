@@ -15,6 +15,9 @@ const render = (text) => DOMPurify.sanitize(md.render(text));
 const doc = document.getElementById('doc');
 const margin = document.getElementById('margin');
 const addButton = document.getElementById('add-comment');
+const batchBar = document.getElementById('batch');
+const batchCount = document.getElementById('batch-count');
+document.getElementById('send-all').addEventListener('click', () => window.pywebview.api.finish());
 
 const threads = [];  // {id, start, end, quote, range, card, sent}
 let activeId = null;
@@ -60,8 +63,32 @@ function selectionInDoc() {
     start: offsetOf(r.startContainer, r.startOffset),
     end: offsetOf(r.endContainer, r.endOffset),
     quote,
+    context: contextOf(r, quote),
     rect: r.getBoundingClientRect(),
   };
+}
+
+// A few words on either side of a highlight, from the same paragraph or list
+// item, for when the quote alone could point to more than one place. Null
+// when the quote is long enough and appears only once.
+const BLOCKS = 'p, li, td, th, h1, h2, h3, h4, h5, h6, pre, blockquote';
+function contextOf(range, quote) {
+  const flat = quote.replace(/\s+/g, ' ');
+  const text = doc.textContent.replace(/\s+/g, ' ');
+  const repeats = text.indexOf(flat) !== text.lastIndexOf(flat);
+  if (flat.split(' ').length > 4 && !repeats) return null;
+  const block = (node) => (node.nodeType === 1 ? node : node.parentElement).closest(BLOCKS) || doc;
+  const before = document.createRange();
+  before.setStart(block(range.startContainer), 0);
+  before.setEnd(range.startContainer, range.startOffset);
+  const after = document.createRange();
+  const endBlock = block(range.endContainer);
+  after.setStart(range.endContainer, range.endOffset);
+  after.setEnd(endBlock, endBlock.childNodes.length);
+  const words = (s) => s.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+  const b = words(before.toString()).slice(-6).join(' ');
+  const a = words(after.toString()).slice(0, 6).join(' ');
+  return `${b ? '…' + b + ' ' : ''}»${flat}«${a ? ' ' + a + '…' : ''}`;
 }
 
 function updateAddButton() {
@@ -133,10 +160,84 @@ function addMessage(t, who, text) {
   body.innerHTML = render(text);
   msg.append(label, body);
   t.card.querySelector('.messages').append(msg);
+  keepStagedLast(t);
+  updateEarlier(t);
+  return msg;
+}
+
+function updateEarlier(t) {
   const n = t.card.querySelectorAll('.msg').length - 1;
   const earlier = t.card.querySelector('.earlier');
   earlier.textContent = n === 1 ? '1 earlier message' : `${n} earlier messages`;
-  earlier.hidden = n === 0;
+  earlier.hidden = n <= 0;
+}
+
+// Staged notes wait in the window and go out together, in document order,
+// when the user sends them (or closes the window). Claude answers them in
+// the terminal, not in the threads.
+function keepStagedLast(t) {
+  const staged = t.card.querySelector('.msg.staged');
+  if (staged) t.card.querySelector('.messages').append(staged);
+}
+
+function renderStaged(t) {
+  t.card.querySelector('.msg.staged')?.remove();
+  if (t.staged) {
+    const msg = addMessage(t, 'staged', t.staged);
+    msg.querySelector('.who').textContent = 'You · staged';
+    const actions = el('div', 'staged-actions');
+    const edit = el('button');
+    edit.textContent = 'Edit';
+    const remove = el('button');
+    remove.textContent = 'Remove';
+    actions.append(edit, remove);
+    msg.append(actions);
+    edit.addEventListener('click', () => {
+      const textarea = t.card.querySelector('textarea');
+      textarea.value = t.staged + (textarea.value ? `\n\n${textarea.value}` : '');
+      unstage(t);
+      textarea.focus();
+      textarea.dispatchEvent(new Event('input'));
+    });
+    remove.addEventListener('click', () => {
+      unstage(t);
+      if (!t.sent) removeThread(t);
+    });
+  }
+  updateEarlier(t);
+  syncStaged();
+  layoutCards();
+}
+
+function unstage(t) {
+  t.staged = null;
+  renderStaged(t);
+}
+
+function syncStaged() {
+  const staged = threads.filter((t) => t.staged).sort((a, b) => a.start - b.start);
+  window.pywebview.api.set_staged(staged.map((t) => ({
+    thread: t.id, quote: t.quote, context: t.context, text: t.staged,
+  })));
+  batchBar.hidden = !staged.length;
+  batchCount.textContent = staged.length === 1 ? '1 staged comment' : `${staged.length} staged comments`;
+}
+
+function stage(t) {
+  const textarea = t.card.querySelector('textarea');
+  const text = textarea.value.trim();
+  if (!text) return;
+  t.staged = t.staged ? `${t.staged}\n\n${text}` : text;
+  clearComposer(t);
+  renderStaged(t);
+}
+
+function clearComposer(t) {
+  const textarea = t.card.querySelector('textarea');
+  textarea.value = '';
+  textarea.dispatchEvent(new Event('input'));
+  textarea.blur();
+  t.card.querySelector('.composer').classList.remove('open');
 }
 
 function setWaiting(t, waiting) {
@@ -148,13 +249,11 @@ function submit(t) {
   const text = textarea.value.trim();
   if (!text) return;
   addMessage(t, 'you', text);
-  window.pywebview.api.comment(t.id, t.quote, text);
+  window.pywebview.api.comment(t.id, t.quote, text, t.context);
   t.sent = true;
-  textarea.value = '';
   textarea.placeholder = 'Reply…';
-  textarea.blur();
   t.card.querySelector('.send').textContent = 'Reply';
-  t.card.querySelector('.composer').classList.remove('open');
+  clearComposer(t);
   setWaiting(t, true);
   layoutCards();
 }
@@ -185,33 +284,41 @@ function buildCard(t) {
   const actions = el('div', 'actions');
   const cancel = el('button', 'cancel');
   cancel.textContent = 'Cancel';
+  const stageButton = el('button', 'stage');
+  stageButton.textContent = 'Stage';
+  stageButton.title = 'Hold this until you send all staged comments (⇧⌘↩)';
   const send = el('button', 'send');
   send.textContent = 'Comment';
-  send.disabled = true;
-  actions.append(cancel, send);
+  send.title = 'Send to Claude now and get a reply here (⌘↩)';
+  actions.append(cancel, stageButton, send);
   composer.append(textarea, actions);
   card.append(quote, earlier, messages, status, composer);
 
+  const kept = () => t.sent || t.staged;
   // Keep focus in the textarea when pressing the buttons, so blur doesn't
   // collapse the actions out from under the click.
-  for (const b of [cancel, send]) b.addEventListener('mousedown', (e) => e.preventDefault());
+  for (const b of [cancel, stageButton, send]) b.addEventListener('mousedown', (e) => e.preventDefault());
   const close = () => {
-    if (!t.sent) return removeThread(t);
-    textarea.value = '';
-    send.disabled = true;
-    composer.classList.remove('open');
-    textarea.blur();
+    if (!kept()) return removeThread(t);
+    clearComposer(t);
     layoutCards();
   };
   cancel.addEventListener('click', close);
+  stageButton.addEventListener('click', () => stage(t));
   send.addEventListener('click', () => submit(t));
   textarea.addEventListener('focus', () => { composer.classList.add('open'); activate(t.id); });
   textarea.addEventListener('blur', () => {
-    if (t.sent && !textarea.value.trim()) { composer.classList.remove('open'); layoutCards(); }
+    if (kept() && !textarea.value.trim()) { composer.classList.remove('open'); layoutCards(); }
   });
-  textarea.addEventListener('input', () => { send.disabled = !textarea.value.trim(); });
+  textarea.addEventListener('input', () => {
+    send.disabled = stageButton.disabled = !textarea.value.trim();
+  });
+  textarea.dispatchEvent(new Event('input'));
   textarea.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submit(t); }
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      if (e.shiftKey) stage(t); else submit(t);
+    }
     if (e.key === 'Escape') close();
   });
   card.addEventListener('mousedown', () => { if (activeId !== t.id) activate(t.id); });
@@ -224,7 +331,10 @@ function startThread() {
   if (!s) return;
   addButton.hidden = true;
   pendingSelection = null;
-  const t = { id: `t${nextId++}`, start: s.start, end: s.end, quote: s.quote, sent: false };
+  const t = {
+    id: `t${nextId++}`, start: s.start, end: s.end, quote: s.quote, context: s.context,
+    sent: false, staged: null,
+  };
   t.range = rangeOf(t.start, t.end);
   t.card = buildCard(t);
   threads.push(t);

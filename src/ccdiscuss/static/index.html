@@ -12,8 +12,16 @@
 </head>
 <body>
   <header>
-    Select text, then press <kbd>⌘⌥M</kbd> or <b>Comment</b> to start a thread.
-    Close the window when you're done.
+    <span class="hint">
+      Select text, then <kbd>⌘⌥M</kbd> to comment.
+      <b>Comment</b> <kbd>⌘↩</kbd> sends now and Claude replies in the thread;
+      <b>Stage</b> <kbd>⇧⌘↩</kbd> holds it to send with the rest.
+      Close the window when you're done.
+    </span>
+    <span id="batch" hidden>
+      <span id="batch-count"></span>
+      <button id="send-all">Send staged &amp; close</button>
+    </span>
   </header>
   <main id="layout">
     <article id="doc" class="md"></article>

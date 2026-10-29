@@ -3,7 +3,8 @@
 A discussion is a temp directory shared by the window and the session:
 
     response.md    the text being discussed
-    outbox.jsonl   window -> session: comments, then a final "closed"
+    outbox.jsonl   window -> session: comments, then any staged ones as one
+                   "batch", then a final "closed"
     inbox.jsonl    session -> window: replies
     window.pid     the window process
 
@@ -71,14 +72,25 @@ def _window_alive(d: Path) -> bool:
     return True
 
 
-def format_comment(d: Path, c: dict) -> str:
+def quoted(c: dict) -> str:
+    """A comment in the terminal's quote-and-reply form."""
     quote = "\n".join("> " + line for line in c["quote"].splitlines())
+    if c.get("context"):  # short or repeated quotes carry their surroundings
+        quote += f"\n[context: {c['context']}]"
+    return f"{quote}\n{c['text']}"
+
+
+def format_comment(d: Path, c: dict) -> str:
     return (
         f"[ccdiscuss comment, thread {c['thread']}]\n"
-        f"{quote}\n"
-        f"{c['text']}\n"
+        f"{quoted(c)}\n"
         f"[reply: ccdiscuss reply {d} {c['thread']} <<'EOF' ... EOF]"
     )
+
+
+def format_batch(b: dict) -> str:
+    body = "\n\n".join(quoted(c) for c in b["items"])
+    return f"[ccdiscuss staged comments: answer in the terminal, not in threads]\n{body}"
 
 
 def cmd_watch(args) -> None:
@@ -97,6 +109,10 @@ def cmd_watch(args) -> None:
     pending = [c for c in comments if c["type"] == "comment" and c["ts"] > last_reply.get(c["thread"], 0)]
     for c in pending:
         print(format_comment(d, c), flush=True)
+    # A batch is written just before "closed", so one already here hasn't been seen.
+    for b in comments:
+        if b["type"] == "batch":
+            print(format_batch(b), flush=True)
 
     closed = any(c["type"] == "closed" for c in comments)
     while not closed:
@@ -105,6 +121,8 @@ def cmd_watch(args) -> None:
         for c in records:
             if c["type"] == "comment":
                 print(format_comment(d, c), flush=True)
+            elif c["type"] == "batch":
+                print(format_batch(c), flush=True)
             elif c["type"] == "closed":
                 closed = True
         if not closed and not _window_alive(d):
