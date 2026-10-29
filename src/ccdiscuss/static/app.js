@@ -80,6 +80,14 @@ function paintHighlights() {
   else CSS.highlights.delete('ccd-active');
 }
 
+// How far down the card its latest message starts. That message is what
+// lines up with the passage, so a long thread grows upward from it instead
+// of pushing the threads below it away.
+function anchorOffset(t) {
+  const msgs = t.card.querySelectorAll('.msg');
+  return msgs.length ? msgs[msgs.length - 1].querySelector('.who').offsetTop : 0;
+}
+
 // Put each card beside its passage, pushing neighbors apart so none overlap.
 // The active card gets its exact spot; the others make room around it.
 function layoutCards() {
@@ -87,8 +95,11 @@ function layoutCards() {
   const base = margin.getBoundingClientRect().top;
   const gap = 8;
   const items = threads
-    .map((t) => ({ t, want: t.range.getBoundingClientRect().top - base, h: t.card.offsetHeight }))
-    .sort((a, b) => a.want - b.want || a.t.start - b.t.start);
+    .map((t) => {
+      const passage = t.range.getBoundingClientRect().top - base;
+      return { t, passage, want: passage - anchorOffset(t), h: t.card.offsetHeight };
+    })
+    .sort((a, b) => a.passage - b.passage || a.t.start - b.t.start);
   const ai = Math.max(0, items.findIndex((i) => i.t.id === activeId));
   items[ai].top = items[ai].want;
   for (let i = ai + 1; i < items.length; i++) {
@@ -97,10 +108,14 @@ function layoutCards() {
   for (let i = ai - 1; i >= 0; i--) {
     items[i].top = Math.min(items[i].want, items[i + 1].top - items[i].h - gap);
   }
-  const shift = Math.min(0, items[0].top);
-  for (const i of items) i.t.card.style.top = `${i.top - shift}px`;
-  const last = items[items.length - 1];
-  margin.style.minHeight = `${last.top - shift + last.h}px`;
+  // Nothing may start above the top of the page; push down only as far as needed.
+  let floor = 0;
+  for (const i of items) {
+    i.top = Math.max(i.top, floor);
+    floor = i.top + i.h + gap;
+    i.t.card.style.top = `${i.top}px`;
+  }
+  margin.style.minHeight = `${floor}px`;
 }
 
 function activate(id) {
@@ -118,6 +133,10 @@ function addMessage(t, who, text) {
   body.innerHTML = render(text);
   msg.append(label, body);
   t.card.querySelector('.messages').append(msg);
+  const n = t.card.querySelectorAll('.msg').length - 1;
+  const earlier = t.card.querySelector('.earlier');
+  earlier.textContent = n === 1 ? '1 earlier message' : `${n} earlier messages`;
+  earlier.hidden = n === 0;
 }
 
 function setWaiting(t, waiting) {
@@ -152,6 +171,8 @@ function buildCard(t) {
   const card = el('div', 'card');
   const quote = el('div', 'quote');
   quote.textContent = t.quote;
+  const earlier = el('div', 'earlier');
+  earlier.hidden = true;
   const messages = el('div', 'messages');
   const status = el('div', 'status');
   status.textContent = 'Waiting for Claude…';
@@ -169,7 +190,7 @@ function buildCard(t) {
   send.disabled = true;
   actions.append(cancel, send);
   composer.append(textarea, actions);
-  card.append(quote, messages, status, composer);
+  card.append(quote, earlier, messages, status, composer);
 
   // Keep focus in the textarea when pressing the buttons, so blur doesn't
   // collapse the actions out from under the click.
