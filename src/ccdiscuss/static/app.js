@@ -356,6 +356,9 @@ window.ccd = {
     setWaiting(t, false);
     layoutCards();
   },
+  setListening(on) {
+    document.getElementById('deaf').hidden = on;
+  },
 };
 
 document.addEventListener('mouseup', () => setTimeout(updateAddButton, 0));

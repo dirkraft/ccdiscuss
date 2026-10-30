@@ -7,6 +7,7 @@ A discussion is a temp directory shared by the window and the session:
                    "batch", then a final "closed"
     inbox.jsonl    session -> window: replies
     window.pid     the window process
+    watch.pid      the current `watch`, so the window can tell when nobody's listening
 
   ccdiscuss open <session-id>      extract the response, launch the window, print the dir
   ccdiscuss watch <dir>            one stdout event per comment, for the Monitor tool
@@ -64,9 +65,9 @@ def cmd_open(args) -> None:
     print(d)
 
 
-def _window_alive(d: Path) -> bool:
+def pid_alive(path: Path) -> bool:
     try:
-        os.kill(int((d / "window.pid").read_text()), 0)
+        os.kill(int(path.read_text()), 0)
     except (OSError, ValueError):
         return False
     return True
@@ -99,6 +100,7 @@ def cmd_watch(args) -> None:
     if not outbox.exists():
         print("[ccdiscuss closed] the discussion is already over")
         return
+    (d / "watch.pid").write_text(str(os.getpid()))
 
     # Re-arming after a Monitor timeout: re-send comments that have no reply yet.
     comments, offset = read_jsonl(outbox)
@@ -125,7 +127,7 @@ def cmd_watch(args) -> None:
                 print(format_batch(c), flush=True)
             elif c["type"] == "closed":
                 closed = True
-        if not closed and not _window_alive(d):
+        if not closed and not pid_alive(d / "window.pid"):
             closed = True
 
     print("[ccdiscuss closed] the discussion window was closed", flush=True)

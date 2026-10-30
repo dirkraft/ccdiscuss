@@ -79,9 +79,17 @@ is already closed.
 
 ## Housekeeping
 
-- If the Monitor times out and you haven't seen the `[ccdiscuss closed]`
-  event, start the same Monitor again. `watch` re-sends any comment that has
-  no reply yet, so check what you've already answered before replying again.
+- **Monitors expire every 30 minutes. Restart this one every time, until you
+  see `[ccdiscuss closed]`.** Don't decide the user is done, however long the
+  window has been quiet. The window is open until they close it, and
+  comments sent while no watch is running wait there until you restart it.
+  Restarting costs nothing when the window is gone: `watch` exits at once
+  with `[ccdiscuss closed]`.
+- Restart silently: no text in the terminal, just the Monitor call. Any text
+  you write becomes your latest response, and the next `/discuss` should
+  reopen the real one.
+- `watch` re-sends any comment that has no reply yet, so check what you've
+  already answered before replying again.
 - `[ccdiscuss closed]` means the user closed the window. If staged comments
   came with it, your answer to them is the response. Otherwise, if the
   threads settled on changes you haven't made, list them briefly in the

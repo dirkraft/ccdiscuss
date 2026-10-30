@@ -127,8 +127,15 @@ How comments queue and get delivered is meant to be iterated on. The starting
 point:
 
 - comments that arrive while Claude is busy wait their turn;
-- a watch lasts at most 30 minutes, so when it expires the skill restarts it,
-  and `watch` re-sends comments that have no reply yet.
+- a Monitor lasts at most 30 minutes and can't be extended. When it expires,
+  Claude Code wakes the session and the skill restarts it, every time and
+  without a word, until the window closes. Comments sent in the gap wait in
+  the window, and `watch` re-sends any that have no reply yet;
+- if nobody restarts it, the window says so in its header. Ask in the
+  terminal to resume the discussion, and the waiting comments go through;
+- `/discuss` skips turns that only ran a discussion: comment replies,
+  restarts, the close. So opening it again picks up the same response, not
+  a "window closed" note.
 
 ### Why not something else
 

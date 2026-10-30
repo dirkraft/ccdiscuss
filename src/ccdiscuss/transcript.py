@@ -40,19 +40,45 @@ def _is_prompt(row: dict) -> bool:
     return isinstance(content, str) and "<command-name>" in content
 
 
+def _starts_turn(row: dict) -> bool:
+    """A prompt or a background notification; tool results continue a turn."""
+    if row["type"] != "user" or row.get("isMeta"):
+        return False
+    content = row["message"]["content"]
+    return isinstance(content, str) or any(b.get("type") != "tool_result" for b in content)
+
+
+def _is_housekeeping(row: dict) -> bool:
+    """A turn that only ran a discussion: /discuss itself, a comment answered in
+    its thread, a Monitor expiry or the window closing. Staged comments are
+    answered in the terminal, so that answer is a real response."""
+    text = json.dumps(row["message"]["content"])
+    if "<command-name>/discuss</command-name>" in text:
+        return True
+    return "discuss comments" in text and "[ccdiscuss staged comments" not in text
+
+
 def last_response(path: Path) -> str:
     """The final text of the response before the newest prompt.
 
     The newest prompt is the /discuss invocation, so the response to discuss
     comes before it. "Final text" is the run of text blocks after the last
-    tool call, which is the part a long answer usually lives in.
+    tool call, which is the part a long answer usually lives in. Turns from an
+    earlier discussion are skipped, so /discuss again reopens the same response.
     """
     rows = _read_rows(path)
     prompts = [i for i, r in enumerate(rows) if _is_prompt(r)]
     end = prompts[-1] if prompts else len(rows)
 
+    kept, skipping = [], False
+    for row in rows[:end]:
+        if _starts_turn(row):
+            skipping = _is_housekeeping(row)
+        if not skipping:
+            kept.append(row)
+
     texts: list[str] = []
-    for row in reversed(rows[:end]):
+    for row in reversed(kept):
         content = row["message"]["content"]
         blocks = content if isinstance(content, list) else [{"type": "text", "text": content}]
         for block in reversed(blocks):

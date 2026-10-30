@@ -1,7 +1,8 @@
 """The discussion window: a native web view over static/index.html.
 
 Comments go out through the JS bridge into outbox.jsonl; replies are read
-from inbox.jsonl and pushed into the page.
+from inbox.jsonl and pushed into the page, along with whether a `watch` is
+running to deliver comments.
 """
 
 import json
@@ -15,9 +16,12 @@ from pathlib import Path
 
 import webview
 
-from .cli import POLL_SECONDS, append_jsonl, read_jsonl
+from .cli import POLL_SECONDS, append_jsonl, pid_alive, read_jsonl
 
 STATIC = Path(__file__).parent / "static"
+# The Monitor running `watch` expires every 30 minutes and Claude restarts it;
+# the few seconds that takes don't count as nobody listening.
+LISTEN_GRACE_SECONDS = 20
 
 
 class Api:
@@ -61,10 +65,17 @@ class Api:
 
 def follow_inbox(window, d: Path) -> None:
     offset = 0
+    last_heard, listening = time.time(), True
     while (d / "inbox.jsonl").exists():
         replies, offset = read_jsonl(d / "inbox.jsonl", offset)
         for r in replies:
             window.evaluate_js(f"ccd.addReply({json.dumps(r['thread'])}, {json.dumps(r['text'])})")
+        if pid_alive(d / "watch.pid"):
+            last_heard = time.time()
+        now_listening = time.time() - last_heard < LISTEN_GRACE_SECONDS
+        if now_listening != listening:
+            listening = now_listening
+            window.evaluate_js(f"ccd.setListening({json.dumps(listening)})")
         time.sleep(POLL_SECONDS)
 
 
