@@ -286,7 +286,7 @@ function buildCard(t) {
   cancel.textContent = 'Cancel';
   const stageButton = el('button', 'stage');
   stageButton.textContent = 'Stage';
-  stageButton.title = 'Hold this until you send all staged comments (⇧⌘↩)';
+  stageButton.title = 'Hold this until you send all staged comments (⌥↩)';
   const send = el('button', 'send');
   send.textContent = 'Comment';
   send.title = 'Send to Claude now and get a reply here (⌘↩)';
@@ -315,9 +315,12 @@ function buildCard(t) {
   });
   textarea.dispatchEvent(new Event('input'));
   textarea.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    if (e.key === 'Enter' && e.altKey) {
       e.preventDefault();
-      if (e.shiftKey) stage(t); else submit(t);
+      stage(t);
+    } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      submit(t);
     }
     if (e.key === 'Escape') close();
   });

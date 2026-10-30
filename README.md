@@ -55,7 +55,7 @@ apart.
    saw the comment.
 
    For a one-off thought that doesn't need its own back-and-forth, press
-   **Stage** (<kbd>⇧⌘↩</kbd>) instead of **Comment** (<kbd>⌘↩</kbd>).
+   **Stage** (<kbd>⌥↩</kbd>) instead of **Comment** (<kbd>⌘↩</kbd>).
    Staged comments wait in the window. **Send staged & close**, or simply
    closing the window, sends them as a single message, in document order:
 
