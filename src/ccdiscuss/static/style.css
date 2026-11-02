@@ -51,8 +51,9 @@ kbd {
 
 #layout {
   position: relative;
-  display: grid; grid-template-columns: minmax(0, 760px) minmax(240px, 340px); gap: 32px;
-  justify-content: center; padding: 24px 24px 120px;
+  /* The response keeps a readable width on the left; threads get the rest. */
+  display: grid; grid-template-columns: minmax(0, 760px) minmax(280px, 1fr); gap: 32px;
+  padding: 24px 24px 120px;
 }
 #margin { position: relative; }
 

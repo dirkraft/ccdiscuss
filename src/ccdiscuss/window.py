@@ -85,7 +85,7 @@ def main() -> None:
     first_line = next((re.sub(r"[#*_`>]", "", l).strip() for l in api.response().splitlines() if l.strip()), "")
     title = "Discuss" + (f": {first_line[:60]}" if first_line else "")
     window = webview.create_window(title, str(STATIC / "index.html"), js_api=api,
-                                   width=1240, height=900, text_select=True)
+                                   width=1440, height=900, text_select=True)
     api._window = window
     window.events.closed += api.close
     webview.start(follow_inbox, (window, d))
