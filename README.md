@@ -41,7 +41,7 @@ ln -s ~/ai2/jasond-slop/ccdiscuss/skill/discuss ~/.claude/skills/discuss
 ```
 
 Then type `/discuss` in any session, right after a response you want to pick
-apart.
+apart, or `/discuss path/to/file` to comment on a file.
 
 ## Flow
 
@@ -70,9 +70,15 @@ apart.
    Claude answers that message in the terminal, as if you had typed it there.
    One window can mix both: live threads for the points you want to talk
    through, and staged notes for everything else.
-4. You can keep using the terminal while the window is open. Permission
+4. `/discuss path/to/file` works the same way on a file. Markdown renders
+   like a response does. Any other text file shows as highlighted code with
+   line numbers, and each comment tells Claude the line range it covers. If
+   Claude edits the file during the discussion, the window keeps showing the
+   version you opened, so your highlights stay put; run `/discuss` on the
+   file again to see the new one.
+5. You can keep using the terminal while the window is open. Permission
    prompts show up there as usual.
-5. Close the window when you're done. If the threads settled on changes
+6. Close the window when you're done. If the threads settled on changes
    Claude hasn't made yet, it lists them and offers to make them. Otherwise
    you just keep using Claude normally.
 

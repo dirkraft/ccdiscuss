@@ -57,6 +57,16 @@ kbd {
 }
 #margin { position: relative; }
 
+/* A code file: full-width, unwrapped lines with numbers beside them. The
+   numbers are generated content, so they're never selected or quoted. */
+#doc.file { min-width: 0; }
+.md pre.code { margin: 0; padding: 12px 0; overflow-x: auto; counter-reset: line; }
+pre.code .line { counter-increment: line; }
+pre.code .line::before {
+  content: counter(line); display: inline-block; width: 3.5em; padding-right: 1em;
+  text-align: right; color: var(--muted); opacity: 0.6; user-select: none;
+}
+
 /* Rendered markdown, close to how Claude Code formats a response. */
 .md > :first-child { margin-top: 0; }
 .md h1, .md h2, .md h3, .md h4 { line-height: 1.3; margin: 1.4em 0 0.5em; }

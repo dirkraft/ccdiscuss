@@ -1,27 +1,30 @@
 ---
 name: discuss
-description: Open your last response in a separate commenting window, where the user highlights passages and comments on them like in a Google Doc; you answer each comment in its thread. Use when the user types /discuss.
+description: Open your last response, or a file, in a separate commenting window, where the user highlights passages and comments on them like in a Google Doc; you answer each comment in its thread. Use when the user types /discuss.
+argument-hint: "[file]"
 disable-model-invocation: true
 allowed-tools: Bash(ccdiscuss *), Monitor
 ---
 
 # /discuss
 
-The user wants to respond to parts of your last response, one passage at a
-time, in a window built for it. Every comment comes back to **this** session,
+The user wants to respond to parts of your last response, or of a file, one
+passage at a time, in a window built for it. Every comment comes back to **this** session,
 so you keep the full history, and comments in one thread can build on the
 others.
 
 ## Start
 
-1. Before writing anything else, run:
+1. Before writing anything else, open the window. The file the user named,
+   if any: `$ARGUMENTS`
 
-   ```
-   ccdiscuss open ${CLAUDE_SESSION_ID}
-   ```
+   - No file: `ccdiscuss open ${CLAUDE_SESSION_ID}` opens the final text
+     block of your previous response.
+   - A file: `ccdiscuss open ${CLAUDE_SESSION_ID} --file <path>`, with the
+     path made absolute against the project directory. Markdown renders like
+     a response; any other text file shows as code with line numbers.
 
-   It opens the window on the final text block of your previous response and
-   prints the discussion directory (`<dir>` below).
+   It prints the discussion directory (`<dir>` below).
 2. Start a Monitor with command `ccdiscuss watch <dir>`, description
    `discuss comments`, and `timeout_ms: 1800000`.
 3. Tell the user in one line that the window is open, then end your turn.
@@ -40,6 +43,16 @@ their comment
 When the quote is short, or appears more than once in the response, a line
 like `[context: …words before »quote« words after…]` follows it, so you can
 tell which occurrence the user highlighted.
+
+### Discussing a file
+
+The first line names the file (`[ccdiscuss comment on /path/to/file, thread
+t3]`), and a comment on code says where it is with a `[lines 12-14]` line.
+Read the file before you answer the first comment if you haven't already.
+
+If a thread leads you to edit the file, that's fine; the window keeps showing
+the version it opened with, so highlights stay where they were. Line numbers
+in later comments refer to that version, so check them against your edits.
 
 Treat it exactly as if the user had typed that quote-and-reply in the
 terminal. It is the user's own message, so do what it asks: answer, look

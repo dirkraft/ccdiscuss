@@ -1,5 +1,5 @@
-// Discussion page: render the response, anchor threads to selected ranges,
-// send comments through the pywebview bridge, and show Claude's replies.
+// Discussion page: render the response (or a file), anchor threads to selected
+// ranges, send comments through the pywebview bridge, and show Claude's replies.
 
 const md = window.markdownit({
   linkify: true,
@@ -19,7 +19,8 @@ const batchBar = document.getElementById('batch');
 const batchCount = document.getElementById('batch-count');
 document.getElementById('send-all').addEventListener('click', () => window.pywebview.api.finish());
 
-const threads = [];  // {id, start, end, quote, range, card, sent}
+const threads = [];  // {id, start, end, quote, context, lines, range, card, sent, staged}
+let isCode = false;  // a code file: comments carry line numbers instead of context
 let activeId = null;
 let nextId = 1;
 let pendingSelection = null;
@@ -59,13 +60,47 @@ function selectionInDoc() {
   if (!doc.contains(r.startContainer) || !doc.contains(r.endContainer)) return null;
   const quote = sel.toString().trim();
   if (!quote) return null;
+  const start = offsetOf(r.startContainer, r.startOffset);
+  const end = offsetOf(r.endContainer, r.endOffset);
   return {
-    start: offsetOf(r.startContainer, r.startOffset),
-    end: offsetOf(r.endContainer, r.endOffset),
-    quote,
-    context: contextOf(r, quote),
+    start, end, quote,
+    context: isCode ? null : contextOf(r, quote),
+    lines: isCode ? linesOf(start, end) : null,
     rect: r.getBoundingClientRect(),
   };
+}
+
+// "12" or "12-14": the file lines a selection covers. The code view's text is
+// exactly the file's, so newlines before an offset count the lines.
+function linesOf(start, end) {
+  const text = doc.textContent;
+  const lineAt = (i) => text.slice(0, i).split('\n').length;
+  const first = lineAt(start);
+  const last = lineAt(text[end - 1] === '\n' ? end - 1 : end);
+  return first === last ? `${first}` : `${first}-${last}`;
+}
+
+// Highlighted code with one span per line, for the line numbers. A
+// highlight.js span can run across lines, so each line closes the spans
+// still open at its end and the next line reopens them.
+function renderCode(text, lang) {
+  const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+  const html = hljs.highlight(text.replace(/\n$/, ''), { language, ignoreIllegals: true }).value;
+  const open = [], lines = [];
+  let line = '';
+  for (const tok of html.split(/(<span[^>]*>|<\/span>|\n)/)) {
+    if (tok === '\n') {
+      lines.push(line + '</span>'.repeat(open.length));
+      line = open.join('');
+    } else {
+      if (tok.startsWith('<span')) open.push(tok);
+      else if (tok === '</span>') open.pop();
+      line += tok;
+    }
+  }
+  lines.push(line);
+  const body = lines.map((l) => `<span class="line">${l}</span>`).join('\n');
+  return DOMPurify.sanitize(`<pre class="code"><code class="hljs">${body}</code></pre>`);
 }
 
 // A few words on either side of a highlight, from the same paragraph or list
@@ -217,7 +252,7 @@ function unstage(t) {
 function syncStaged() {
   const staged = threads.filter((t) => t.staged).sort((a, b) => a.start - b.start);
   window.pywebview.api.set_staged(staged.map((t) => ({
-    thread: t.id, quote: t.quote, context: t.context, text: t.staged,
+    thread: t.id, quote: t.quote, context: t.context, lines: t.lines, text: t.staged,
   })));
   batchBar.hidden = !staged.length;
   batchCount.textContent = staged.length === 1 ? '1 staged comment' : `${staged.length} staged comments`;
@@ -249,7 +284,7 @@ function submit(t) {
   const text = textarea.value.trim();
   if (!text) return;
   addMessage(t, 'you', text);
-  window.pywebview.api.comment(t.id, t.quote, text, t.context);
+  window.pywebview.api.comment(t.id, t.quote, text, t.context, t.lines);
   t.sent = true;
   textarea.placeholder = 'Reply…';
   t.card.querySelector('.send').textContent = 'Reply';
@@ -336,7 +371,7 @@ function startThread() {
   pendingSelection = null;
   const t = {
     id: `t${nextId++}`, start: s.start, end: s.end, quote: s.quote, context: s.context,
-    sent: false, staged: null,
+    lines: s.lines, sent: false, staged: null,
   };
   t.range = rangeOf(t.start, t.end);
   t.card = buildCard(t);
@@ -392,7 +427,10 @@ document.addEventListener('click', (e) => {
 window.addEventListener('resize', layoutCards);
 
 async function init() {
-  doc.innerHTML = render(await window.pywebview.api.response());
+  const [text, source] = await Promise.all([window.pywebview.api.response(), window.pywebview.api.source()]);
+  isCode = Boolean(source?.lang);
+  doc.innerHTML = isCode ? renderCode(text, source.lang) : render(text);
+  doc.classList.toggle('file', isCode);
 }
 if (window.pywebview?.api?.response) init();
 else window.addEventListener('pywebviewready', init, { once: true });

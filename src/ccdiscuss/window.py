@@ -35,11 +35,17 @@ class Api:
     def response(self) -> str:
         return (self._dir / "response.md").read_text()
 
-    def comment(self, thread: str, quote: str, text: str, context: str | None = None) -> None:
+    def source(self) -> dict | None:
+        """The file being discussed, or None for a response."""
+        path = self._dir / "source.json"
+        return json.loads(path.read_text()) if path.exists() else None
+
+    def comment(self, thread: str, quote: str, text: str, context: str | None = None,
+                lines: str | None = None) -> None:
         with self._lock:
             append_jsonl(self._dir / "outbox.jsonl",
                          {"type": "comment", "thread": thread, "quote": quote, "context": context,
-                          "text": text, "ts": time.time()})
+                          "lines": lines, "text": text, "ts": time.time()})
 
     def set_staged(self, items: list[dict]) -> None:
         """The page's current staged comments, in document order."""
@@ -82,8 +88,12 @@ def follow_inbox(window, d: Path) -> None:
 def main() -> None:
     d = Path(sys.argv[1])
     api = Api(d)
-    first_line = next((re.sub(r"[#*_`>]", "", l).strip() for l in api.response().splitlines() if l.strip()), "")
-    title = "Discuss" + (f": {first_line[:60]}" if first_line else "")
+    source = api.source()
+    if source:
+        title = f"Discuss: {Path(source['path']).name}"
+    else:
+        first_line = next((re.sub(r"[#*_`>]", "", l).strip() for l in api.response().splitlines() if l.strip()), "")
+        title = "Discuss" + (f": {first_line[:60]}" if first_line else "")
     window = webview.create_window(title, str(STATIC / "index.html"), js_api=api,
                                    width=1440, height=900, text_select=True)
     api._window = window
