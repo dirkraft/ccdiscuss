@@ -70,14 +70,14 @@ def test_watch_prints_comments_and_batch_then_cleans_up(discussion):
 def test_watch_does_not_resend_answered_comments(discussion):
     write_jsonl(
         discussion / "outbox.jsonl",
-        comment("t1", "answered", "old", 1.0),
-        comment("t2", "unanswered", "still waiting", 2.0),
+        comment("t1", "answered", "ALREADY-ANSWERED", 1.0),
+        comment("t2", "unanswered", "STILL-WAITING", 2.0),
         {"type": "closed", "ts": 5.0},
     )
     write_jsonl(discussion / "inbox.jsonl", {"type": "reply", "thread": "t1", "text": "done", "ts": 1.5})
     stdout = ccdiscuss("watch", str(discussion)).stdout.decode("utf-8")
-    assert "still waiting" in stdout
-    assert "old" not in stdout
+    assert "STILL-WAITING" in stdout
+    assert "ALREADY-ANSWERED" not in stdout
 
 
 def test_watch_ends_when_the_window_process_is_gone(discussion, window):
@@ -102,7 +102,10 @@ def test_watch_streams_a_comment_written_while_running(discussion):
         write_jsonl(discussion / "outbox.jsonl", comment("t1", "live", "hello ⛰️", time.time()))
         assert watch.stdout.readline().decode("utf-8").strip() == "[ccdiscuss comment, thread t1]"
         write_jsonl(discussion / "outbox.jsonl", {"type": "closed", "ts": time.time()})
-        rest = watch.communicate(timeout=TIMEOUT)[0].decode("utf-8")
+        # Read through the same buffered reader as readline above; communicate()
+        # on POSIX reads the pipe directly and would miss what's already buffered.
+        rest = watch.stdout.read().decode("utf-8")
+        watch.wait(timeout=TIMEOUT)
         assert "hello ⛰️" in rest
         assert "[ccdiscuss closed]" in rest
     finally:
