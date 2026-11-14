@@ -1,7 +1,9 @@
 # ccdiscuss
 
-`/discuss`: respond to parts of a long Claude Code response the way you would
-in a Google Doc. Highlight a passage, comment, and the running Claude session
+[![test](https://github.com/dirkraft/ccdiscuss/actions/workflows/test.yml/badge.svg)](https://github.com/dirkraft/ccdiscuss/actions/workflows/test.yml)
+
+`/discuss`: respond to parts of a long [Claude Code](https://claude.com/claude-code)
+response the way you would in a Google Doc. Highlight a passage, comment, and the running Claude session
 answers in that thread.
 
 ![ccdiscuss demo: /discuss opens the last response in its own window, a highlighted passage gets a comment, and Claude replies in the thread](docs/demo.gif)
@@ -29,15 +31,22 @@ one short line:
 
 <img src="docs/terminal.png" width="800" alt="The terminal during a discussion: /discuss, Monitor started, two comment events each followed by 'Replied in thread t1', then the stream ending when the window closed">
 
-Status: first version, tested end to end in a live session. Comments woke the
-idle session, replies showed up in their threads, and closing the window
-ended the watch.
+Status: early, but used for real. Tested end to end in live Claude Code
+sessions on macOS and Windows: comments woke the idle session, replies showed
+up in their threads, and closing the window ended the watch. The tests run on
+macOS, Linux and Windows; on Linux only the window itself is untested.
 
 ## Install
 
-From a clone of this repo:
+You need [Claude Code](https://claude.com/claude-code) and
+[uv](https://docs.astral.sh/uv/). uv fetches Python 3.12+ if you don't have it.
 
-macOS / Linux:
+```
+git clone https://github.com/dirkraft/ccdiscuss.git
+cd ccdiscuss
+```
+
+macOS:
 
 ```
 uv tool install --editable .    # puts `ccdiscuss` on your PATH
@@ -45,7 +54,7 @@ ln -s "$PWD/skill/discuss" ~/.claude/skills/discuss
 ```
 
 Windows (PowerShell). A directory junction stands in for the symlink, since
-those need Developer Mode:
+symlinks need Developer Mode:
 
 ```
 uv tool install --editable .
@@ -53,6 +62,17 @@ New-Item -ItemType Junction -Path "$HOME\.claude\skills\discuss" -Target "$PWD\s
 ```
 
 The window uses Edge WebView2, which ships with Windows 10 and 11.
+
+Linux (untested): pywebview needs a GUI backend there. Qt is usually the
+easiest to install:
+
+```
+uv tool install --editable . --with 'pywebview[qt]'
+ln -s "$PWD/skill/discuss" ~/.claude/skills/discuss
+```
+
+See [pywebview's installation notes](https://pywebview.flowrl.com/guide/installation.html)
+for GTK and the system packages each backend needs.
 
 Then type `/discuss` in any session, right after a response you want to pick
 apart, or `/discuss path/to/file` to comment on a file.
@@ -63,9 +83,10 @@ apart, or `/discuss path/to/file` to comment on a file.
 2. `/discuss` opens a separate native window (not a browser tab) showing the
    final text block of that response, meaning the text after the last tool
    call, rendered as markdown.
-3. Highlight any range and comment. Each comment goes to the **same running
-   session** (no forks), so every thread shares the full history and sees the
-   other threads. Claude always replies in the thread, even just to say it
+3. Highlight any range and comment (the **Comment** button that appears, or
+   <kbd>⌘⌥M</kbd>; <kbd>Ctrl+Alt+M</kbd> on Windows and Linux). Each comment
+   goes to the **same running session** (no forks), so every thread shares
+   the full history and sees the other threads. Claude always replies in the thread, even just to say it
    saw the comment.
 
    For a one-off thought that doesn't need its own back-and-forth, press
@@ -170,8 +191,8 @@ point:
 
 - Python, run with uv.
 - [pywebview](https://pywebview.flowrl.com/) for the window. It uses the
-  system web view, so the window is native and gets its own Dock or taskbar icon, with no
-  Chrome involved. Page events reach Python through the pywebview JavaScript
+  system web view, so the window is native and gets its own Dock or taskbar
+  icon, with no Chrome involved. Page events reach Python through the pywebview JavaScript
   bridge, so no server is needed.
 - Page: plain HTML and JavaScript with no build step. Vendored libraries:
   - `markdown-it` for GitHub-flavored markdown;
@@ -184,12 +205,24 @@ point:
 ## Layout
 
 ```
-pyproject.toml
-src/ccdiscuss/      cli.py (open / watch / reply), window.py, transcript.py
+pyproject.toml, uv.lock
+src/ccdiscuss/          cli.py (open / watch / reply), window.py, transcript.py
 src/ccdiscuss/static/   index.html, app.js, style.css, vendor/ (pinned copies)
-skill/discuss/SKILL.md   symlinked into ~/.claude/skills/discuss
-docs/               README demo and screenshots
+skill/discuss/SKILL.md  symlinked into ~/.claude/skills/discuss
+tests/                  pytest: transcript parsing, cli helpers, watch/reply
+.github/workflows/      runs the tests on macOS, Linux and Windows
+docs/                   README demo and screenshots
 ```
+
+## Development
+
+```
+uv run pytest
+```
+
+The tests cover everything except the window, which needs a display. Because
+the install is editable, changes to the source take effect the next time you
+run `/discuss`.
 
 ## License
 
