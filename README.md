@@ -190,3 +190,10 @@ src/ccdiscuss/static/   index.html, app.js, style.css, vendor/ (pinned copies)
 skill/discuss/SKILL.md   symlinked into ~/.claude/skills/discuss
 docs/               README demo and screenshots
 ```
+
+## License
+
+MIT; see [LICENSE](LICENSE). The libraries vendored under
+`src/ccdiscuss/static/vendor/` keep their own licenses, noted at the top of
+each file: markdown-it (MIT), highlight.js (BSD-3-Clause) and DOMPurify
+(Apache-2.0 or MPL-2.0).
