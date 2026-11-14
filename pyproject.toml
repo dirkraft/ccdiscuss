@@ -3,6 +3,8 @@ name = "ccdiscuss"
 version = "0.1.0"
 description = "Comment on parts of a Claude Code response in its own window; the running session replies in each thread."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "Jason Dunkelberger", email = "dirkraft@gmail.com" }
 ]
