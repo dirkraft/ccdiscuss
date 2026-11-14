@@ -35,9 +35,11 @@ ended the watch.
 
 ## Install
 
+From a clone of this repo:
+
 ```
-uv tool install --editable ~/ai2/jasond-slop/ccdiscuss    # puts `ccdiscuss` on your PATH
-ln -s ~/ai2/jasond-slop/ccdiscuss/skill/discuss ~/.claude/skills/discuss
+uv tool install --editable .    # puts `ccdiscuss` on your PATH
+ln -s "$PWD/skill/discuss" ~/.claude/skills/discuss
 ```
 
 Then type `/discuss` in any session, right after a response you want to pick
@@ -153,7 +155,7 @@ point:
 
 ## Stack
 
-- Python, run with uv like the other tools in this repo.
+- Python, run with uv.
 - [pywebview](https://pywebview.flowrl.com/) for the window. It uses the
   system web view, so the window is native and gets its own Dock icon, with no
   Chrome involved. Page events reach Python through the pywebview JavaScript
@@ -169,10 +171,9 @@ point:
 ## Layout
 
 ```
-ccdiscuss/
-  pyproject.toml
-  src/ccdiscuss/      cli.py (open / watch / reply), window.py, transcript.py
-  src/ccdiscuss/static/   index.html, app.js, style.css, vendor/ (pinned copies)
-  skill/discuss/SKILL.md   symlinked into ~/.claude/skills/discuss
-  docs/               README demo and screenshots
+pyproject.toml
+src/ccdiscuss/      cli.py (open / watch / reply), window.py, transcript.py
+src/ccdiscuss/static/   index.html, app.js, style.css, vendor/ (pinned copies)
+skill/discuss/SKILL.md   symlinked into ~/.claude/skills/discuss
+docs/               README demo and screenshots
 ```
