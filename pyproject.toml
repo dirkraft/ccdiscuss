@@ -11,6 +11,14 @@ dependencies = [
     "pywebview>=5.4",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [project.scripts]
 ccdiscuss = "ccdiscuss.cli:main"
 
