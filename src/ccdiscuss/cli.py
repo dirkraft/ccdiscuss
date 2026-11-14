@@ -230,8 +230,9 @@ def cmd_reply(args) -> None:
 
 def main() -> None:
     # Comments go out on stdout and replies come in on stdin, both UTF-8,
-    # whatever the console's code page (cp1252 on most Windows machines).
-    sys.stdout.reconfigure(encoding="utf-8")
+    # whatever the console's code page (cp1252 on most Windows machines), and
+    # events end in \n everywhere rather than \r\n on Windows.
+    sys.stdout.reconfigure(encoding="utf-8", newline="\n")
     sys.stdin.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(prog="ccdiscuss", description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="cmd", required=True)
