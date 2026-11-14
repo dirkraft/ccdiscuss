@@ -12,6 +12,13 @@ const md = window.markdownit({
 });
 const render = (text) => DOMPurify.sanitize(md.render(text));
 
+// Shortcuts: ⌘/⌥ on a Mac, Ctrl/Alt elsewhere. The header's <kbd data-keys>
+// hints are written for the Mac and rewritten here for everything else.
+const ON_MAC = /Mac/.test(navigator.platform);
+const shortcutLabel = (combo) => (ON_MAC ? combo : combo.replace('⌘', 'Ctrl+').replace('⌥', 'Alt+').replace('↩', 'Enter'));
+const isShortcutMod = (e) => (ON_MAC ? e.metaKey : e.ctrlKey);
+document.querySelectorAll('kbd[data-keys]').forEach((k) => { k.textContent = shortcutLabel(k.dataset.keys); });
+
 const doc = document.getElementById('doc');
 const margin = document.getElementById('margin');
 const addButton = document.getElementById('add-comment');
@@ -321,10 +328,10 @@ function buildCard(t) {
   cancel.textContent = 'Cancel';
   const stageButton = el('button', 'stage');
   stageButton.textContent = 'Stage';
-  stageButton.title = 'Hold this until you send all staged comments (⌥↩)';
+  stageButton.title = `Hold this until you send all staged comments (${shortcutLabel('⌥↩')})`;
   const send = el('button', 'send');
   send.textContent = 'Comment';
-  send.title = 'Send to Claude now and get a reply here (⌘↩)';
+  send.title = `Send to Claude now and get a reply here (${shortcutLabel('⌘↩')})`;
   actions.append(cancel, stageButton, send);
   composer.append(textarea, actions);
   card.append(quote, earlier, messages, status, composer);
@@ -401,7 +408,7 @@ document.addEventListener('keyup', (e) => { if (e.shiftKey || e.key.startsWith('
 addButton.addEventListener('mousedown', (e) => e.preventDefault());
 addButton.addEventListener('click', startThread);
 document.addEventListener('keydown', (e) => {
-  if (e.metaKey && e.altKey && e.code === 'KeyM') { e.preventDefault(); startThread(); }
+  if (isShortcutMod(e) && e.altKey && e.code === 'KeyM') { e.preventDefault(); startThread(); }
 });
 
 // Clicking highlighted text brings up its thread.

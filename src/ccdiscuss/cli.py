@@ -20,6 +20,7 @@ A discussion is a temp directory shared by the window and the session:
 import argparse
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -32,10 +33,11 @@ from . import transcript
 POLL_SECONDS = 0.5
 MARKDOWN_SUFFIXES = {".md", ".markdown", ".mdx"}
 MAX_FILE_BYTES = 2_000_000
+WINDOWS = sys.platform == "win32"
 
 
 def append_jsonl(path: Path, record: dict) -> None:
-    with path.open("a") as f:
+    with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(record) + "\n")
 
 
@@ -57,7 +59,7 @@ def read_source(path: Path) -> tuple[str, dict]:
     if path.stat().st_size > MAX_FILE_BYTES:
         sys.exit(f"too big to discuss: {path}")
     try:
-        text = path.read_text()
+        text = path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
         sys.exit(f"not a text file: {path}")
     # Markdown renders like a response; anything else is code, named for highlight.js.
@@ -78,26 +80,71 @@ def cmd_open(args) -> None:
         sys.exit("nothing to discuss: " + ("the file is empty" if source else "no response text found before this prompt"))
 
     d = Path(tempfile.mkdtemp(prefix="ccdiscuss-"))
-    (d / "response.md").write_text(text)
+    (d / "response.md").write_text(text, encoding="utf-8")
     if source:
-        (d / "source.json").write_text(json.dumps(source))
+        (d / "source.json").write_text(json.dumps(source), encoding="utf-8")
     (d / "outbox.jsonl").touch()
     (d / "inbox.jsonl").touch()
-    with (d / "window.log").open("w") as log:
-        proc = subprocess.Popen(
-            [sys.executable, "-m", "ccdiscuss.window", str(d)],
-            stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True,
-        )
+    with (d / "window.log").open("w", encoding="utf-8") as log:
+        proc = launch_window(d, log)
     (d / "window.pid").write_text(str(proc.pid))
-    print(d)
+    print(shell_path(d))
+
+
+def shell_path(d: Path) -> str:
+    """The directory as the session should type it: forward slashes, quoted if
+    needed, so it survives Bash on Windows (C:\\Users\\... would lose its backslashes)."""
+    return shlex.quote(d.as_posix())
+
+
+def launch_window(d: Path, log) -> subprocess.Popen:
+    """Start the window so it outlives the shell command that opened it."""
+    cmd = [sys.executable, "-m", "ccdiscuss.window", str(d)]
+    common = dict(stdin=subprocess.DEVNULL, stdout=log, stderr=log)
+    if not WINDOWS:
+        return subprocess.Popen(cmd, start_new_session=True, **common)
+    # No console, its own process group, and out of the caller's job object if
+    # allowed, so tools that kill a command's whole job don't take the window with it.
+    flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+    try:
+        return subprocess.Popen(cmd, creationflags=flags | subprocess.CREATE_BREAKAWAY_FROM_JOB, **common)
+    except OSError:  # the job doesn't allow breakaway
+        return subprocess.Popen(cmd, creationflags=flags, **common)
 
 
 def pid_alive(path: Path) -> bool:
     try:
-        os.kill(int(path.read_text()), 0)
+        pid = int(path.read_text())
     except (OSError, ValueError):
         return False
+    if WINDOWS:
+        return _windows_pid_alive(pid)
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
     return True
+
+
+def _windows_pid_alive(pid: int) -> bool:
+    # os.kill(pid, 0) isn't a probe on Windows: signal 0 is CTRL_C_EVENT.
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+    kernel32.GetExitCodeProcess.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD))
+    kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+    PROCESS_QUERY_LIMITED_INFORMATION, STILL_ACTIVE = 0x1000, 259
+    handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+    if not handle:
+        return False
+    try:
+        code = wintypes.DWORD()
+        return bool(kernel32.GetExitCodeProcess(handle, ctypes.byref(code))) and code.value == STILL_ACTIVE
+    finally:
+        kernel32.CloseHandle(handle)
 
 
 def quoted(c: dict) -> str:
@@ -113,7 +160,7 @@ def quoted(c: dict) -> str:
 def source_of(d: Path) -> str:
     """' on <path>' when the discussion is about a file."""
     try:
-        return f" on {json.loads((d / 'source.json').read_text())['path']}"
+        return f" on {json.loads((d / 'source.json').read_text(encoding='utf-8'))['path']}"
     except FileNotFoundError:
         return ""
 
@@ -122,7 +169,7 @@ def format_comment(d: Path, c: dict) -> str:
     return (
         f"[ccdiscuss comment{source_of(d)}, thread {c['thread']}]\n"
         f"{quoted(c)}\n"
-        f"[reply: ccdiscuss reply {d} {c['thread']} <<'EOF' ... EOF]"
+        f"[reply: ccdiscuss reply {shell_path(d)} {c['thread']} <<'EOF' ... EOF]"
     )
 
 
@@ -182,6 +229,10 @@ def cmd_reply(args) -> None:
 
 
 def main() -> None:
+    # Comments go out on stdout and replies come in on stdin, both UTF-8,
+    # whatever the console's code page (cp1252 on most Windows machines).
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stdin.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(prog="ccdiscuss", description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("open", help="open a discussion window on the session's last response")

@@ -37,10 +37,22 @@ ended the watch.
 
 From a clone of this repo:
 
+macOS / Linux:
+
 ```
 uv tool install --editable .    # puts `ccdiscuss` on your PATH
 ln -s "$PWD/skill/discuss" ~/.claude/skills/discuss
 ```
+
+Windows (PowerShell). A directory junction stands in for the symlink, since
+those need Developer Mode:
+
+```
+uv tool install --editable .
+New-Item -ItemType Junction -Path "$HOME\.claude\skills\discuss" -Target "$PWD\skill\discuss"
+```
+
+The window uses Edge WebView2, which ships with Windows 10 and 11.
 
 Then type `/discuss` in any session, right after a response you want to pick
 apart, or `/discuss path/to/file` to comment on a file.
@@ -57,7 +69,8 @@ apart, or `/discuss path/to/file` to comment on a file.
    saw the comment.
 
    For a one-off thought that doesn't need its own back-and-forth, press
-   **Stage** (<kbd>⌥↩</kbd>) instead of **Comment** (<kbd>⌘↩</kbd>).
+   **Stage** (<kbd>⌥↩</kbd>) instead of **Comment** (<kbd>⌘↩</kbd>); on
+   Windows and Linux those are <kbd>Alt+Enter</kbd> and <kbd>Ctrl+Enter</kbd>.
    Staged comments wait in the window. **Send staged & close**, or simply
    closing the window, sends them as a single message, in document order:
 
@@ -157,7 +170,7 @@ point:
 
 - Python, run with uv.
 - [pywebview](https://pywebview.flowrl.com/) for the window. It uses the
-  system web view, so the window is native and gets its own Dock icon, with no
+  system web view, so the window is native and gets its own Dock or taskbar icon, with no
   Chrome involved. Page events reach Python through the pywebview JavaScript
   bridge, so no server is needed.
 - Page: plain HTML and JavaScript with no build step. Vendored libraries:

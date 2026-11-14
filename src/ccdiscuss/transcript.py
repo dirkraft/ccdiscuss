@@ -20,7 +20,7 @@ def transcript_path(session_id: str) -> Path:
 
 def _read_rows(path: Path) -> list[dict]:
     rows = []
-    for line in path.open():
+    for line in path.open(encoding="utf-8"):
         try:
             row = json.loads(line)
         except json.JSONDecodeError:

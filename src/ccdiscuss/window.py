@@ -33,12 +33,12 @@ class Api:
         self._window = None
 
     def response(self) -> str:
-        return (self._dir / "response.md").read_text()
+        return (self._dir / "response.md").read_text(encoding="utf-8")
 
     def source(self) -> dict | None:
         """The file being discussed, or None for a response."""
         path = self._dir / "source.json"
-        return json.loads(path.read_text()) if path.exists() else None
+        return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
     def comment(self, thread: str, quote: str, text: str, context: str | None = None,
                 lines: str | None = None) -> None:
